@@ -64,6 +64,8 @@ type Config struct {
 	Telegram TeleConfig `yaml:"telegram"`
 	// Slack webhook information
 	Slack SlackConfig `yaml:"slack"`
+	// Matrix configuration information
+	Matrix MatrixConfig `yaml:"matrix"`
 	// Healthcheck information
 	Healthcheck HealthcheckConfig `yaml:"healthcheck"`
 
@@ -171,6 +173,9 @@ type AlertConfig struct {
 	// TelegramAlerts: Should telegram alerts be sent for this chain? Both 'config.telegram.enabled: yes' and this must be set.
 	//Deprecated: use Telegram.Enabled instead
 	TelegramAlerts bool `yaml:"telegram_alerts"`
+	// MatrixAlerts: Should matrix alerts be sent for this chain? Both 'config.matrix.enabled: yes' and this must be set.
+	//Deprecated: use Matrix.Enabled instead
+	MatrixAlerts bool `yaml:"matrix_alerts"`
 
 	// chain specific overrides for alert destinations.
 	// Pagerduty configuration values
@@ -181,6 +186,8 @@ type AlertConfig struct {
 	Telegram TeleConfig `yaml:"telegram"`
 	// Slack webhook information
 	Slack SlackConfig `yaml:"slack"`
+	// Matrix webhook information
+	Matrix MatrixConfig `yaml:"matrix"`
 }
 
 // NodeConfig holds the basic information for a node to connect to.
@@ -222,6 +229,12 @@ type SlackConfig struct {
 	Enabled  bool     `yaml:"enabled"`
 	Webhook  string   `yaml:"webhook"`
 	Mentions []string `yaml:"mentions"`
+}
+
+// MatrixConfig holds the information needed to send a message to a Matrix channel
+type MatrixConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Room    string `yaml:"room_url"`
 }
 
 // HealthcheckConfig holds the information needed to send pings to a healthcheck endpoint
@@ -305,6 +318,9 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			v.Alerts.Pagerduty.ApiKey = c.Pagerduty.ApiKey
 			v.Alerts.Pagerduty.DefaultSeverity = c.Pagerduty.DefaultSeverity
 		}
+		if v.Alerts.Matrix.Room == "" {
+			v.Alerts.Matrix.Room = c.Matrix.Room
+		}
 
 		switch {
 		case v.Alerts.Slack.Enabled && !c.Slack.Enabled:
@@ -318,10 +334,12 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			fallthrough
 		case v.Alerts.Telegram.Enabled && !c.Telegram.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s is configured for telegram alerts, but it is not enabled", k))
+		case v.Alerts.Matrix.Enabled && !c.Matrix.Enabled:
+			problems = append(problems, fmt.Sprintf("warn: %20s is configured for matrix alerts, but it is not enabled", k))
 		case !v.Alerts.ConsecutiveAlerts && !v.Alerts.PercentageAlerts && !v.Alerts.AlertIfInactive && !v.Alerts.AlertIfNoServers:
 			problems = append(problems, fmt.Sprintf("warn: %20s has no alert types configured", k))
 			fallthrough
-		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled && !v.Alerts.Slack.Enabled:
+		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled && !v.Alerts.Slack.Enabled && !v.Alerts.Slack.Enabled && !v.Alerts.Matrix.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s has no notifications configured", k))
 		}
 		if td.EnableDash {
@@ -532,6 +550,10 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *stri
 		if saved.Alarms.SentSlkAlarms != nil {
 			alarms.SentSlkAlarms = saved.Alarms.SentSlkAlarms
 			clearStale(alarms.SentSlkAlarms, "Slack", c.Pagerduty.Enabled, staleHours)
+		}
+		if saved.Alarms.SentMatAlarms != nil {
+			alarms.SentMatAlarms = saved.Alarms.SentMatAlarms
+			clearStale(alarms.SentMatAlarms, "Matrix", c.Pagerduty.Enabled, staleHours)
 		}
 		if saved.Alarms.AllAlarms != nil {
 			alarms.AllAlarms = saved.Alarms.AllAlarms

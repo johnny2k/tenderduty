@@ -20,6 +20,7 @@ type alertMsg struct {
 	disc bool
 	tg   bool
 	slk  bool
+	mat  bool
 
 	severity string
 	resolved bool
@@ -37,6 +38,8 @@ type alertMsg struct {
 
 	slkHook     string
 	slkMentions string
+
+	matRoom string
 }
 
 type notifyDest uint8
@@ -46,6 +49,7 @@ const (
 	tg
 	di
 	slk
+	mat
 )
 
 type alarmCache struct {
@@ -53,6 +57,7 @@ type alarmCache struct {
 	SentTgAlarms   map[string]time.Time            `json:"sent_tg_alarms"`
 	SentDiAlarms   map[string]time.Time            `json:"sent_di_alarms"`
 	SentSlkAlarms  map[string]time.Time            `json:"sent_slk_alarms"`
+	SentMatAlarms  map[string]time.Time            `json:"sent_mat_alarms"`
 	AllAlarms      map[string]map[string]time.Time `json:"sent_all_alarms"`
 	flappingAlarms map[string]map[string]time.Time
 	notifyMux      sync.RWMutex
@@ -95,6 +100,7 @@ var alarms = &alarmCache{
 	SentTgAlarms:   make(map[string]time.Time),
 	SentDiAlarms:   make(map[string]time.Time),
 	SentSlkAlarms:  make(map[string]time.Time),
+	SentMatAlarms:  make(map[string]time.Time),
 	AllAlarms:      make(map[string]map[string]time.Time),
 	flappingAlarms: make(map[string]map[string]time.Time),
 	notifyMux:      sync.RWMutex{},
@@ -121,6 +127,9 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 	case slk:
 		whichMap = alarms.SentSlkAlarms
 		service = "Slack"
+	case mat:
+		whichMap = alarms.SentMatAlarms
+		service = "Matrix"
 	}
 
 	switch {
@@ -337,6 +346,53 @@ func notifyPagerduty(msg *alertMsg) (err error) {
 	return
 }
 
+func notifyMatrix(msg *alertMsg) (err error) {
+	//if !msg.mat {
+	//return
+	//}
+	data, err := json.Marshal(buildMatrixMessage(msg))
+	if err != nil {
+		fmt.Println("buildMatrixMessage(msg) was not nil")
+		return
+	}
+	fmt.Println(bytes.NewBuffer(data))
+
+	req, err := http.NewRequest("PUT", msg.matRoom, bytes.NewBuffer(data))
+	if err != nil {
+		return
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	_ = resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("could not notify matrix for %s got %d response", msg.chain, resp.StatusCode)
+	}
+
+	return
+}
+
+type MatrixMessage struct {
+	MsgType string `json:"msgtype"`
+	Body    string `json:"body"`
+}
+
+func buildMatrixMessage(msg *alertMsg) *MatrixMessage {
+	prefix := "🚨 ALERT: "
+	if msg.resolved {
+		msg.message = "OK: " + msg.message
+		prefix = "💜 Resolved: "
+	}
+	return &MatrixMessage{
+		MsgType: "m.text",
+		Body:    fmt.Sprintf("TenderDuty %s %s %s %s", msg.message, prefix, msg.chain),
+	}
+}
+
 func getAlarms(chain string) string {
 	alarms.notifyMux.RLock()
 	defer alarms.notifyMux.RUnlock()
@@ -363,6 +419,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 		disc:         c.Discord.Enabled && c.Chains[chainName].Alerts.Discord.Enabled,
 		tg:           c.Telegram.Enabled && c.Chains[chainName].Alerts.Telegram.Enabled,
 		slk:          c.Slack.Enabled && c.Chains[chainName].Alerts.Slack.Enabled,
+		mat:          c.Matrix.Enabled && c.Chains[chainName].Alerts.Matrix.Enabled,
 		severity:     severity,
 		resolved:     resolved,
 		chain:        chainName,
@@ -375,6 +432,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 		discHook:     c.Chains[chainName].Alerts.Discord.Webhook,
 		discMentions: strings.Join(c.Chains[chainName].Alerts.Discord.Mentions, " "),
 		slkHook:      c.Chains[chainName].Alerts.Slack.Webhook,
+		matRoom:      c.Chains[chainName].Alerts.Matrix.Room,
 	}
 	c.alertChan <- a
 	c.chainsMux.RUnlock()

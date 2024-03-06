@@ -53,6 +53,10 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 					if e != nil {
 						l(msg.chain, "error sending alert to slack", e.Error())
 					}
+					e = notifyMatrix(msg)
+					if e != nil {
+						l(msg.chain, "error sending alert to matrix", e.Error())
+					}
 				}(alert)
 			case <-td.ctx.Done():
 				return

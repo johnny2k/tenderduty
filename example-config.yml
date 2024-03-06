@@ -49,6 +49,13 @@ slack:
   # The webhook can be added in the Slack app directory.
   webhook: https://hooks.slack.com/services/AAAAAAAAAAAAAAAAAAAAAAA/bbbbbbbbbbbbbbbbbbbbbbbb
 
+# Matrix settings
+matrix:
+  # Send alerts to Matrix?
+  enabled: no
+  # The webhook can be added in the Slack app directory.
+  room_url: https://matrix.org/_matrix/client/r0/rooms/AAAAAAAAAAAAAA/send/m.room.message/?access_token=BBBBBBBBB
+
 # Healthcheck settings (dead man's switch)
 healthcheck:
   # Send pings to determine if the monitor is running?

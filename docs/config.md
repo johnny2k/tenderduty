@@ -79,6 +79,13 @@ chains:
 | `telegram.api_key` | API key ... talk to @BotFather. More setup info in the [telegram doc](telegram.md). |
 | `telegram.channel` | See the [telegram doc](telegram.md) for how to get this value.                      |
 
+## Matrix Settings
+
+| Config Setting     | Description                                                                         |
+|--------------------|-------------------------------------------------------------------------------------|
+| `matrix.enabled`  | Alert via matrix? Note: also supersedes chain-specific settings.                  |
+| `matrix.room_url` | Room URL. More setup info in the [matrix doc](matrix.md). |
+
 ## Health Check Settings
 
 | Config Setting          | Description                                                                         |
