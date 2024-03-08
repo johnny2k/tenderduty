@@ -389,7 +389,7 @@ func buildMatrixMessage(msg *alertMsg) *MatrixMessage {
 	}
 	return &MatrixMessage{
 		MsgType: "m.text",
-		Body:    fmt.Sprintf("TenderDuty %s %s %s %s", msg.message, prefix, msg.chain),
+		Body:    fmt.Sprintf("TenderDuty %s %s %s", msg.message, prefix, msg.chain),
 	}
 }
 

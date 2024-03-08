@@ -334,8 +334,10 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			fallthrough
 		case v.Alerts.Telegram.Enabled && !c.Telegram.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s is configured for telegram alerts, but it is not enabled", k))
+			fallthrough
 		case v.Alerts.Matrix.Enabled && !c.Matrix.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s is configured for matrix alerts, but it is not enabled", k))
+			fallthrough
 		case !v.Alerts.ConsecutiveAlerts && !v.Alerts.PercentageAlerts && !v.Alerts.AlertIfInactive && !v.Alerts.AlertIfNoServers:
 			problems = append(problems, fmt.Sprintf("warn: %20s has no alert types configured", k))
 			fallthrough
@@ -607,6 +609,6 @@ func clearStale(alarms map[string]time.Time, what string, hasPagerduty bool, hou
 			delete(alarms, k)
 			continue
 		}
-		l("📂 restored %s alarm state -", what, k)
+		l(fmt.Sprintf("📂 restored %s alarm state -%s", what, k))
 	}
 }
