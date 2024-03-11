@@ -347,9 +347,9 @@ func notifyPagerduty(msg *alertMsg) (err error) {
 }
 
 func notifyMatrix(msg *alertMsg) (err error) {
-	//if !msg.mat {
-	//return
-	//}
+	if !msg.mat {
+		return nil
+	}
 	data, err := json.Marshal(buildMatrixMessage(msg))
 	if err != nil {
 		fmt.Println("buildMatrixMessage(msg) was not nil")
